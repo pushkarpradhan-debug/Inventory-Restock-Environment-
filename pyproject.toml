@@ -1,0 +1,18 @@
+[project]
+name = "inventory-restock-env"
+version = "1.0.0"
+description = "Inventory Restock OpenEnv Environment"
+authors = [
+    { name="Pushkarpradhan" }
+]
+dependencies = [
+    "fastapi==0.110.0",
+    "uvicorn==0.35.0",
+    "pydantic==2.7.1",
+    "pyyaml==6.0.1",
+    "openenv-core==0.2.0"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
