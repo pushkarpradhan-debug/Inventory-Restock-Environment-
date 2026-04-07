@@ -45,10 +45,17 @@ def root():
     }
 
 
+from typing import Optional
+
 @app.post("/reset")
-def reset(request: ResetRequest):
-    """Start a new episode for the specified task."""
-    obs = env.reset(task_id=request.task_id)
+def reset(request: Optional[ResetRequest] = None):
+    """Start a new episode safely (works with or without body)."""
+    
+    if request:
+        obs = env.reset(task_id=request.task_id)
+    else:
+        obs = env.reset(task_id="1")  # default task
+
     return obs.model_dump()
 
 
