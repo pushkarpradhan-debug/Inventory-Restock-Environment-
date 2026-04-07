@@ -46,20 +46,10 @@ def root():
 
 
 @app.post("/reset")
-def reset(request: Optional[ResetRequest] = None):
-    """Start a new episode safely (works with or without body)."""
-
-    try:
-        if request and request.task_id:
-            task_id = str(request.task_id)
-        else:
-            task_id = "1"  # default
-
-        obs = env.reset(task_id=task_id)
-        return obs.model_dump()
-
-    except Exception as e:
-        return {"error": str(e)}
+def reset(request: ResetRequest | None = None):
+    task_id = request.task_id if request else 1
+    obs = env.reset(task_id=task_id)
+    return obs.model_dump()
 
 
 @app.post("/step")
