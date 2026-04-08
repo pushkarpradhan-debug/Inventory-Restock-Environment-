@@ -69,17 +69,17 @@ def grade_episode(task_id: int, total_reward: float) -> GradeResult:
     target_s = bounds["target_score"]
     name = bounds["name"]
 
-   # Normalize
-grade = (total_reward - min_s) / (target_s - min_s)
+    # Normalize
+    grade = (total_reward - min_s) / (target_s - min_s)
 
-# strict clamp BEFORE rounding
-grade = max(0.0001, min(0.9999, grade))
+    # strict clamp BEFORE rounding
+    grade = max(0.0001, min(0.9999, grade))
 
-# round
-grade = round(grade, 4)
+    # round
+    grade = round(grade, 4)
 
-# strict clamp AGAIN after rounding (very important)
-grade = max(0.0001, min(0.9999, grade))
+    # strict clamp AGAIN after rounding (very important)
+    grade = max(0.0001, min(0.9999, grade))
 
     passed = grade >= 0.5
 
