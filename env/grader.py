@@ -32,7 +32,7 @@ SCORE_BOUNDS = {
     1: {
         "name": "Easy - Stable Demand",
         "min_score": -80.0,    # if agent never restocks: 20 days × (5 unmet × -2)
-        "target_score": 80.0,  # if agent sells 5 units/day for 20 days × +1 each
+        "target_score": 85.0,  # if agent sells 5 units/day for 20 days × +1 each
     },
     2: {
         "name": "Medium - Variable Demand",
@@ -69,10 +69,17 @@ def grade_episode(task_id: int, total_reward: float) -> GradeResult:
     target_s = bounds["target_score"]
     name = bounds["name"]
 
-    # Normalize
-    grade = (total_reward - min_s) / (target_s - min_s)
-    grade = max(0.0, min(1.0, grade))   # clamp to [0, 1]
-    grade = round(grade, 4)
+   # Normalize
+grade = (total_reward - min_s) / (target_s - min_s)
+
+# strict clamp BEFORE rounding
+grade = max(0.0001, min(0.9999, grade))
+
+# round
+grade = round(grade, 4)
+
+# strict clamp AGAIN after rounding (very important)
+grade = max(0.0001, min(0.9999, grade))
 
     passed = grade >= 0.5
 
