@@ -10,29 +10,26 @@
 #
 # The grader is DETERMINISTIC for Task 1 (fixed demand),
 # and bounded for Tasks 2 and 3 (random demand).
-
+ # grader.py
 from dataclasses import dataclass
-from typing import List
+from typing import Dict
 
 
 @dataclass
 class GradeResult:
     task_id: int
     task_name: str
-    raw_score: float        # total accumulated reward from the episode
-    grade: float            # normalized 0.01–0.99
-    passed: bool            # True if grade >= 0.5
+    raw_score: float
+    grade: float
+    passed: bool
     summary: str
 
-
-# ── Score bounds per task (pre-calculated based on max days × demand) ────────
-# These are the min/max total rewards an agent can realistically get.
 
 SCORE_BOUNDS = {
     1: {
         "name": "Easy - Stable Demand",
-        "min_score": -80.0,    # if agent never restocks: 20 days × (5 unmet × -2)
-        "target_score": 85.0,  # if agent sells 5 units/day for 20 days × +1 each
+        "min_score": -80.0,
+        "target_score": 85.0,
     },
     2: {
         "name": "Medium - Variable Demand",
@@ -48,17 +45,6 @@ SCORE_BOUNDS = {
 
 
 def grade_episode(task_id: int, total_reward: float) -> GradeResult:
-    """
-    Convert a raw episode reward into a normalized 0.01–0.99 grade.
-    Formula:
-        grade = (total_reward - min_score) / (target_score - min_score)
-        grade = clamp(grade, 0.01, 0.99)
-    This means:
-      - If agent scores exactly min_score → grade = 0.0001
-      - If agent scores exactly target_score → grade = 0.99
-      - Anything above target_score → grade = 0.99 (capped)
-      - Anything below min_score → grade =0.01 (capped)
-    """
     bounds = SCORE_BOUNDS.get(task_id)
     if bounds is None:
         raise ValueError(f"Unknown task_id: {task_id}. Valid: 1, 2, 3")
@@ -67,18 +53,16 @@ def grade_episode(task_id: int, total_reward: float) -> GradeResult:
     target_s = bounds["target_score"]
     name = bounds["name"]
 
-    
     # Normalize
     grade = (total_reward - min_s) / (target_s - min_s)
 
-    # strict clamp BEFORE rounding
-    grade = max(0.01, min(0.99, grade))
+    # STRICT SAFE RANGE (avoid 0 and 1 completely)
+    grade = max(0.011, min(0.989, grade))
 
-    # round
     grade = round(grade, 4)
 
-    # strict clamp AGAIN after rounding (very important)
-    grade = max(0.01, min(0.99, grade))
+    # clamp again after rounding
+    grade = max(0.011, min(0.989, grade))
 
     passed = grade >= 0.5
 
@@ -101,21 +85,25 @@ def grade_episode(task_id: int, total_reward: float) -> GradeResult:
     )
 
 
-def run_grader(task_id: int, env, agent_fn) -> GradeResult:
+# ✅ NEW FUNCTION (THIS FIXES YOUR FAILURE)
+def run_grader(env, agent_fn) -> Dict[str, float]:
     """
-    Run one full episode and return the grade.
-    Parameters:
-        task_id   - which task (1, 2, or 3)
-        env       - the InventoryRestockEnvironment instance
-        agent_fn  - a function(observation) -> RestockAction
-    Returns:
-        GradeResult with grade between 0.01 and 0.99
+    Runs ALL 3 tasks and returns dict of scores (REQUIRED BY HF)
     """
-    obs = env.reset(task_id, seed=task_id)
 
-    while not obs.done:
-        action = agent_fn(obs)
-        obs = env.step(action)
+    results = {}
 
-    total_reward = env.state.total_reward
-    return grade_episode(task_id, total_reward)
+    for task_id in [1, 2, 3]:
+        obs = env.reset(task_id, seed=task_id)
+
+        while not obs.done:
+            action = agent_fn(obs)
+            obs = env.step(action)
+
+        total_reward = env.state.total_reward
+        grade_result = grade_episode(task_id, total_reward)
+
+        # ONLY return grade (HF requirement)
+        results[f"task_{task_id}"] = grade_result.grade
+
+    return results
