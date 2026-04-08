@@ -87,23 +87,20 @@ def grade_episode(task_id: int, total_reward: float) -> GradeResult:
 
 # ✅ NEW FUNCTION (THIS FIXES YOUR FAILURE)
 def run_grader(env, agent_fn) -> Dict[str, float]:
-    """
-    Runs ALL 3 tasks and returns dict of scores (REQUIRED BY HF)
-    """
-
     results = {}
 
     for task_id in [1, 2, 3]:
-        obs = env.reset(task_id, seed=task_id)
+        env_local = type(env)()
+
+        obs = env_local.reset(task_id=task_id, seed=task_id)
 
         while not obs.done:
             action = agent_fn(obs)
-            obs = env.step(action)
+            obs = env_local.step(action)
 
-        total_reward = env.state.total_reward
+        total_reward = env_local.state.total_reward
         grade_result = grade_episode(task_id, total_reward)
 
-        # ONLY return grade (HF requirement)
-        results[f"task_{task_id}"] = grade_result.grade
+        results[f"task_{task_id}"] = float(grade_result.grade)
 
     return results
