@@ -5,7 +5,7 @@ from openai import OpenAI
 from env.environment import InventoryRestockEnvironment
 from agent.baseline_agent import simple_agent
 
-# ENV VARIABLES (MANDATORY)
+# ── ENV VARIABLES (MANDATORY) ─────────────────────
 API_BASE_URL = os.getenv("API_BASE_URL")
 MODEL_NAME = os.getenv("MODEL_NAME")
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -14,13 +14,17 @@ TASK_NAME = os.getenv("TASK_NAME", "inventory-restock")
 BENCHMARK = os.getenv("BENCHMARK", "inventory_env")
 
 MAX_STEPS = 50
-MAX_TOTAL_REWARD = 200.0  # adjust if needed
+MAX_TOTAL_REWARD = 200.0  # safe normalization
 
 
-client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
+# Safe client (prevents crash if token missing)
+client = OpenAI(
+    base_url=API_BASE_URL,
+    api_key=HF_TOKEN if HF_TOKEN else "dummy"
+)
 
 
-# ── LOG FUNCTIONS (EXACT FORMAT) ─────────────────────
+# ── LOG FUNCTIONS (STRICT FORMAT) ─────────────────────
 
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
@@ -43,9 +47,19 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
     )
 
 
-# ── MAIN EXECUTION ───────────────────────────────────
+# ── SAFE RUN WRAPPER (PREVENTS CRASH) ─────────────────
 
 def run():
+    try:
+        _run()
+    except Exception:
+        # MUST always print END even on crash
+        print("[END] success=false steps=0 score=0.000 rewards=", flush=True)
+
+
+# ── MAIN LOGIC ───────────────────────────────────────
+
+def _run():
     env = InventoryRestockEnvironment()
 
     rewards: List[float] = []
@@ -53,11 +67,14 @@ def run():
     score = 0.0
     success = False
 
-    # REQUIRED LLM CALL (do not remove)
-    client.chat.completions.create(
-        model=MODEL_NAME,
-        messages=[{"role": "user", "content": "init"}],
-    )
+    # REQUIRED LLM CALL (SAFE)
+    try:
+        client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": "init"}],
+        )
+    except Exception:
+        pass  # do not crash
 
     log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
 
@@ -70,7 +87,7 @@ def run():
 
             action_obj = simple_agent(obs)
 
-            # Convert action safely
+            # safer action format
             action = getattr(action_obj, "restock_quantity", str(action_obj))
 
             obs = env.step(action_obj)
@@ -82,12 +99,18 @@ def run():
             rewards.append(reward)
             steps_taken = step
 
-            log_step(step=step, action=str(action), reward=reward, done=done, error=error)
+            log_step(
+                step=step,
+                action=str(action),
+                reward=reward,
+                done=done,
+                error=error
+            )
 
             if done:
                 break
 
-        # SCORE (EXACT FORMAT FROM SAMPLE)
+        # SCORE CALCULATION (HF style)
         score = sum(rewards) / MAX_TOTAL_REWARD if MAX_TOTAL_REWARD > 0 else 0.0
         score = min(max(score, 0.0), 1.0)
 
