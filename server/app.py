@@ -9,6 +9,8 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from env.environment import InventoryRestockEnvironment
 from agent.baseline_agent import simple_agent
+from env.grader import run_grader
+
 
 app = FastAPI(
     title="Inventory Restock OpenEnv",
@@ -73,6 +75,13 @@ def auto_step():
     """Agent automatically decides restock action."""
     from env.models import RestockAction
 
+@app.get("/grade")
+def grade():
+    """
+    Runs all 3 tasks and returns scores (REQUIRED for HF validation)
+    """
+    results = run_grader(env, simple_agent)
+    return results
     # Get current observation from state
     obs = env.state
 
@@ -89,8 +98,10 @@ def main():
     uvicorn.run("server.app:app", host="0.0.0.0", port=7860)
 
 
-if __name__ == "__main__":
-    main()
 def main():
     import uvicorn
     uvicorn.run("server.app:app", host="0.0.0.0", port=7860)
+
+
+if __name__ == "__main__":
+    main()
