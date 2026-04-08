@@ -75,6 +75,20 @@ def auto_step():
     """Agent automatically decides restock action."""
     from env.models import RestockAction
 
+    obs = env.state
+    action = simple_agent(obs)
+    obs = env.step(action)
+
+    return obs.model_dump()
+
+
+# ✅ CORRECT GRADER ENDPOINT
+@app.get("/evaluate")
+def evaluate():
+    """
+    Runs all 3 tasks and returns scores (HF REQUIRED)
+    """
+    return run_grader(env, simple_agent)
 @app.get("/grade")
 def grade():
     """
