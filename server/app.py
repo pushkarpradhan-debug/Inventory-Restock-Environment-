@@ -88,7 +88,7 @@ def evaluate():
     """
     Runs all 3 tasks and returns scores (HF REQUIRED)
     """
-    return run_grader(env, simple_agent)
+    return run_grader()
 @app.get("/grade")
 def grade():
     """
